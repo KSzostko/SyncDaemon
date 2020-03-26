@@ -1,4 +1,6 @@
 // do testowania synchronizacji
+#include <time.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <dirent.h>
@@ -46,7 +48,7 @@ int main(int argc, char *argv[])
     // czy podane dwa argumenty
     if (argc < 3)
     {
-        printf("You have't specified two paths");
+        printf("You have't specified two paths\n");
         exit(EXIT_FAILURE);
     }
 
@@ -95,6 +97,19 @@ int main(int argc, char *argv[])
         type = get_file_type(entry_path1);
         /* Print the type and path of the entry. */
         printf("%-18s: %s\n", type, entry_path1);
+
+        // tylko pliki trzeba porownywac (w 2 podpunkcie tez katalogi ale to pozniej)
+        if (type == "regular file")
+        {
+            // w tym struct bedzie cale info o pliku tu masz link do tego
+            // https://www.gnu.org/software/libc/manual/html_node/Attribute-Meanings.html#Attribute-Meanings
+            struct stat st;
+            lstat(entry_path1, &st);
+
+            time_t last_modification;
+            last_modification = st.st_mtime;
+            printf("Last modification time of this file is: %s", asctime(gmtime(&last_modification)));
+        }
     }
 
     /* All done. */
