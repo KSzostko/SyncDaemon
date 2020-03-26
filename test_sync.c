@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     dir_path2 = argv[2];
 
     // czy sciezki sa poprawne
-    if (get_file_type(dir_path1) != = "directory" || get_file_type(dir_path2) != = "directory")
+    if (get_file_type(dir_path1) != "directory" || get_file_type(dir_path2) != "directory")
     {
         printf("You specified correct directories");
         exit(EXIT_FAILURE);
