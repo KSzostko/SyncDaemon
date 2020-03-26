@@ -1,4 +1,5 @@
 // do testowania synchronizacji
+#include <stdlib.h>
 #include <assert.h>
 #include <dirent.h>
 #include <stdio.h>
