@@ -109,6 +109,16 @@ int main(int argc, char *argv[])
             time_t last_modification;
             last_modification = st.st_mtime;
             printf("Last modification time of this file is: %s", asctime(gmtime(&last_modification)));
+
+            // porownanie czasow
+            // funkcja do tego to difftime(pierwszy_czas, drugi_czas)
+            // 1. jak 0 to zajebiscie czilerka
+            // 2. jak w docelowym pozniej to trzeba skopiowac ze zrodlowego zawartosc i zmienic czas na ze zrodlowego
+            // 3. jak w zrodlowym pozniej to nie napisane xD ale pewnie tez zmienic w docelowym na to samo
+
+            // jak jakis plik tylko w jednym katalogu jest
+            // jak tylko plik w zrodlowm to kopia do docelowego
+            // jak tylko plik w docelowym to wyjebac
         }
     }
 
