@@ -13,24 +13,31 @@
 const char *get_file_type(const char *path)
 {
     struct stat st;
-    lstat(path, &st);
-    if (S_ISLNK(st.st_mode))
-        return "symbolic link";
-    else if (S_ISDIR(st.st_mode))
-        return "directory";
-    else if (S_ISCHR(st.st_mode))
-        return "character device";
-    else if (S_ISBLK(st.st_mode))
-        return "block device";
-    else if (S_ISFIFO(st.st_mode))
-        return "fifo";
-    else if (S_ISSOCK(st.st_mode))
-        return "socket";
-    else if (S_ISREG(st.st_mode))
-        return "regular file";
+    if (lstat(path, &st) == 0)
+    {
+        if (S_ISLNK(st.st_mode))
+            return "symbolic link";
+        else if (S_ISDIR(st.st_mode))
+            return "directory";
+        else if (S_ISCHR(st.st_mode))
+            return "character device";
+        else if (S_ISBLK(st.st_mode))
+            return "block device";
+        else if (S_ISFIFO(st.st_mode))
+            return "fifo";
+        else if (S_ISSOCK(st.st_mode))
+            return "socket";
+        else if (S_ISREG(st.st_mode))
+            return "regular file";
+        else
+            /* Unexpected. Each entry should be one of the types above. */
+            assert(0);
+    }
     else
-        /* Unexpected. Each entry should be one of the types above. */
-        assert(0);
+    {
+        printf("You specified wrong file type");
+        exit(EXIT_FAILURE);
+    }
 }
 int main(int argc, char *argv[])
 {
@@ -58,7 +65,7 @@ int main(int argc, char *argv[])
     // czy sciezki sa poprawne
     if (get_file_type(dir_path1) != "directory" || get_file_type(dir_path2) != "directory")
     {
-        printf("You specified correct directories");
+        printf("You specified incorrect directories");
         exit(EXIT_FAILURE);
     }
 
