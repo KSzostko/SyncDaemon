@@ -140,15 +140,65 @@ int main(int argc, char *argv[])
         }
     }
 
+    dir2 = opendir(dir_path2);
+    char files_path2[100][PATH_MAX + 1];
+    int files_count_path2 = 0;
+    while ((entry2 = readdir(dir2)) != NULL)
+    {
+        const char *type;
+        /* Build the path to the directory entry by appending the entry
+        name to the path name. */
+        strncpy(entry_path2 + path_len2, entry2->d_name,
+                sizeof(entry_path2) - path_len2);
+        /* Determine the type of the entry. */
+        type = get_file_type(entry_path2);
+        /* Print the type and path of the entry. */
+        printf("%-18s: %s\n", type, entry_path2);
+
+        // tylko pliki trzeba porownywac (w 2 podpunkcie tez katalogi ale to pozniej)
+        if (type == "regular file")
+        {
+            // tylko pliki do tablicy wrzucamy bo rzeszty nie musimy sprawdzac
+            // popierdolone wiem ale normlane wstawienie do tablicy takie files_path1[files_count_path1] = entry_path1 nie dziala
+            strncpy(files_path2[files_count_path2], entry_path2, sizeof(files_path2[files_count_path2]));
+            files_count_path2++;
+            // w tym struct bedzie cale info o pliku tu masz link do tego
+            // https://www.gnu.org/software/libc/manual/html_node/Attribute-Meanings.html#Attribute-Meanings
+            struct stat st;
+            lstat(entry_path2, &st);
+
+            time_t last_modification;
+            last_modification = st.st_mtime;
+            printf("Last modification time of this file is: %s", asctime(gmtime(&last_modification)));
+
+            // porownanie czasow
+            // funkcja do tego to difftime(pierwszy_czas, drugi_czas)
+            // 1. jak 0 to zajebiscie czilerka
+            // 2. jak w docelowym pozniej to trzeba skopiowac ze zrodlowego zawartosc i zmienic czas na ze zrodlowego
+            // 3. jak w zrodlowym pozniej to nie napisane xD ale pewnie tez zmienic w docelowym na to samo
+
+            // jak jakis plik tylko w jednym katalogu jest
+            // jak tylko plik w zrodlowm to kopia do docelowego
+            // jak tylko plik w docelowym to wyjebac
+        }
+    }
+
     // tutaj tylko sprawdzenie czy dobrze sie dodalo do tablicy
     printf("\n\n\n\n");
     int i = 0;
+    printf("Pliki w pierwszej sciezce:\n");
     for (i = 0; i < files_count_path1; i++)
     {
         printf("%s\n", files_path1[i]);
     }
+    printf("Pliki w drugiej sciezce:\n");
+    for (i = 0; i < files_count_path2; i++)
+    {
+        printf("%s\n", files_path2[i]);
+    }
 
     /* All done. */
     closedir(dir1);
+    closedir(dir2);
     return 0;
 }
