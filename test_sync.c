@@ -35,7 +35,7 @@ const char *get_file_type(const char *path)
     }
     else
     {
-        printf("You specified wrong file type");
+        printf("You specified wrong file type\n");
         exit(EXIT_FAILURE);
     }
 }
@@ -93,6 +93,13 @@ int main(int argc, char *argv[])
     command line. */
     dir1 = opendir(dir_path1);
     /* Loop over all directory entries. */
+    /*
+        Tutaj mamy taki problem, ze wypisuje te pliki ze sciezki w dowolnej kolejnosci,
+        wiec proponuje z sciezek wstawic nazwy do tablicy posortowac i potem przechodzic po tych
+        tablicach i patrzec czy sie zgadza(jak masz inny pomysl to sprobuj)
+    */
+    char files_path1[100][PATH_MAX + 1];
+    int files_count_path1 = 0;
     while ((entry1 = readdir(dir1)) != NULL)
     {
         const char *type;
@@ -108,6 +115,10 @@ int main(int argc, char *argv[])
         // tylko pliki trzeba porownywac (w 2 podpunkcie tez katalogi ale to pozniej)
         if (type == "regular file")
         {
+            // tylko pliki do tablicy wrzucamy bo rzeszty nie musimy sprawdzac
+            // popierdolone wiem ale normlane wstawienie do tablicy takie files_path1[files_count_path1] = entry_path1 nie dziala
+            strncpy(files_path1[files_count_path1], entry_path1, sizeof(files_path1[files_count_path1]));
+            files_count_path1++;
             // w tym struct bedzie cale info o pliku tu masz link do tego
             // https://www.gnu.org/software/libc/manual/html_node/Attribute-Meanings.html#Attribute-Meanings
             struct stat st;
@@ -127,6 +138,14 @@ int main(int argc, char *argv[])
             // jak tylko plik w zrodlowm to kopia do docelowego
             // jak tylko plik w docelowym to wyjebac
         }
+    }
+
+    // tutaj tylko sprawdzenie czy dobrze sie dodalo do tablicy
+    printf("\n\n\n\n");
+    int i = 0;
+    for (i = 0; i < files_count_path1; i++)
+    {
+        printf("%s\n", files_path1[i]);
     }
 
     /* All done. */
