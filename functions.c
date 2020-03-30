@@ -57,12 +57,12 @@ void change_modification_time(char *mainFile, char *updatedFile)
 }
 
 /* change file directory */
-char *change_path(char *file_path, char *current_directory, char *target_directory) //1. pełna ścieżka do pliku np.home / zrodlo / plik, 2. katalog zrodlowy, 3. katalog docelowy
+char *change_path(char *file_path, char *current_directory, char *target_directory) //1. pełna ścieżka do pliku np.home / zrodlo / file, 2. katalog zrodlowy, 3. katalog docelowy
 {
-    char *filename = file_path + strlen(current_directory);                            //ucinamy poczatek katalogu i zostawiamy sama nazwe pliku
-    char *updated_file_path = malloc(strlen(target_directory) + strlen(filename) + 1); //alokujemy pamiec na nowa sciezke
-    strcpy(updated_file_path, target_directory);                                       //zamiana katalogu ze zrodlowego na docelowy, czyli doklejamy do pustej zmiennej nazwe katalogu docelowego
-    strcat(updated_file_path, filename);                                               //dodanie nazwy pliku
+    char *filename = file_path + strlen(current_directory);                                    //ucinamy poczatek katalogu i zostawiamy sama nazwe pliku
+    char *updated_file_path = (char *)malloc(strlen(target_directory) + strlen(filename) + 1); //alokujemy pamiec na nowa sciezke
+    strcpy(updated_file_path, target_directory);                                               //zamiana katalogu ze zrodlowego na docelowy, czyli doklejamy do pustej zmiennej nazwe katalogu docelowego
+    strcat(updated_file_path, filename);                                                       //dodanie nazwy pliku
 
     return updated_file_path;
 }
@@ -70,22 +70,22 @@ char *change_path(char *file_path, char *current_directory, char *target_directo
 /* Return full path to file */
 char *get_file_path(char *path, char *filename) //1. ścieżka źródłowa, 2. nazwa pliku
 {
-    char *full_path = malloc(strlen(path) + 2 + strlen(filename)); //alokujemy pamięć na nową nazwę ścieżki
-    strcpy(full_path, path);                                       //dodajemy początek ścieżki np. /home/zrodlo
-    strcat(full_path, "/");                                        // /home/zrodlo/
-    strcat(full_path, filename);                                   // /home/zrodlo/plik1
+    char *full_path = (char *)malloc(strlen(path) + 2 + strlen(filename)); //alokujemy pamięć na nową nazwę ścieżki
+    strcpy(full_path, path);                                               //dodajemy początek ścieżki np. /home/zrodlo
+    strcat(full_path, "/");                                                // /home/zrodlo/
+    strcat(full_path, filename);                                           // /home/zrodlo/plik1
     full_path[strlen(path) + 1 + strlen(filename)] = '\0';
 
     return full_path;
 }
 
 /* check if file exsists in both directories and has the same modification time */
-bool check_file(char *filepath, char *current_directory, char *target_directory) //1. pełna ścieżka do pliku np. home/zrodlo/plik, 2. katalog zrodlowy, 3. katalog docelowy
+bool check_file(char *filepath, char *current_directory, char *target_directory) //1. pełna ścieżka do pliku np. home/zrodlo/file, 2. katalog zrodlowy, 3. katalog docelowy
 {
     bool result = 0;
     char *filename = filepath + strlen(current_directory); //ucinamy poczatek katalogu i zostawiamy sama nazwe pliku
     // ja to mysle ze ta zmienna szukany do wywalenia ale to trzeba sprawdzic
-    char *searched_path = malloc(strlen(filename));                                  //alokacja pamieci
+    char *searched_path = (char *)malloc(strlen(filename));                          //alokacja pamieci
     char *updated_path = change_path(filepath, current_directory, target_directory); //otrzymujemy zamieniony folder zrodlowy z docelowym
 
     int i = strlen(updated_path);
@@ -93,7 +93,7 @@ bool check_file(char *filepath, char *current_directory, char *target_directory)
         ;
     strcpy(searched_path, updated_path + i + 1); //pod "searched_path" wpisywana jest nazwa pliku, nowa sciezka zostaje sama sciekza docelowa
     updated_path[i] = '\0';
-    struct dirent *plik;
+    struct dirent *file;
     DIR *dir;
     dir = opendir(updated_path); //otwieramy strumien do sciezki docelowej
 
@@ -163,7 +163,7 @@ void delete_file(char *filepath, char *main_directory, char *target_direcotyr, b
             char *new_dir_path = get_file_path(filepath, file->d_name);
             if (access(podmien_folder2(new_dir_path, main_directory, target_direcotyr), F_OK) == -1)
             {
-                syslog(LOG_INFO, "Usunieto plik %s", new_dir_path);
+                syslog(LOG_INFO, "Usunieto file %s", new_dir_path);
                 remove(new_dir_path);
             }
         }
@@ -197,7 +197,7 @@ void copy(char *read_file_path, char *write_file_path)
     close(read_file);
     close(write_file);
     change_modification_time(read_file_path, write_file_path);
-    syslog(LOG_INFO, "Skopiowano plik %s", read_file_path);
+    syslog(LOG_INFO, "Skopiowano file %s", read_file_path);
 }
 
 /* Map one file content to another */
@@ -221,59 +221,59 @@ void map_file(char *read_file_path, char *write_file_path)
     close(write_file);
     munmap(map, read_file_size); //usuwanie mapy z paamieci;
     zmien_parametry(read_file_path, write_file_path);
-    syslog(LOG_INFO, "Z uzyciem mapowania skopiowano plik %s do miejsca %s", read_file_path, write_file_path);
+    syslog(LOG_INFO, "Z uzyciem mapowania skopiowano file %s do miejsca %s", read_file_path, write_file_path);
 }
 
-void PrzegladanieFolderu(char *nazwa_sciezki1, char *sciezka_folderu1, char *sciezka_folderu2, bool CzyR, int Wielkosc_pliku)
+void list_folder_files(char *current_directory, char *main_directory, char *target_directory, bool flag_R, int file_size)
 //1. folder źródłowy, 2. folder źródłowy, 3. folder docelowy, 4. rekurencja, 5. wielkość pliku
 {
-    printf("JESTESMY W : %s\n", nazwa_sciezki1);
-    struct dirent *plik;               //struct dirent - struktura wskazująca na element w katalogu (plik/folder), zawiera nazwę pliku
-    DIR *sciezka, *pom;                //funkcja otwierająca strumień do katalogu
-    sciezka = opendir(nazwa_sciezki1); //przechodzimy do folderu źródłowego
-    char *nowa_sciezka;
-    while ((plik = readdir(sciezka)))
+    printf("JESTESMY W : %s\n", current_directory);
+    struct dirent *file;                   //struct dirent - struktura wskazująca na element w katalogu (file/folder), zawiera nazwę pliku
+    DIR *curr_dir, *helper;                //funkcja otwierająca strumień do katalogu
+    curr_dir = opendir(current_directory); //przechodzimy do folderu źródłowego
+    char *new_path;
+    while ((file = readdir(curr_dir)))
     {
-        printf("%s  \n", plik->d_name);
-        if ((plik->d_type) == DT_DIR) //GDY JEST FOLDEREM
+        printf("%s  \n", file->d_name);
+        if ((file->d_type) == DT_DIR) //GDY JEST FOLDEREM
         {
-            if (CzyR)
+            if (flag_R)
             {
-                if (!(strcmp(plik->d_name, ".") == 0 || strcmp(plik->d_name, "..") == 0))
+                if (!(strcmp(file->d_name, ".") == 0 || strcmp(file->d_name, "..") == 0))
                 {
-                    char *sciekza_do_folderu = podmien_folder1(dodaj_do_sciezki(nazwa_sciezki1, plik->d_name), sciezka_folderu1, sciezka_folderu2);
-                    if (!(pom = opendir(sciekza_do_folderu)))
+                    char *path_to_directory = change_path(get_file_path(current_directory, file->d_name), main_directory, target_directory);
+                    if (!(helper = opendir(path_to_directory)))
                     {
-                        syslog(LOG_INFO, "Stworzono folder %s", sciekza_do_folderu);
-                        mkdir(sciekza_do_folderu, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+                        syslog(LOG_INFO, "Stworzono folder %s", path_to_directory);
+                        mkdir(path_to_directory, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
                     }
                     else
                     {
-                        closedir(pom);
+                        closedir(helper);
                     }
-                    nowa_sciezka = dodaj_do_sciezki(nazwa_sciezki1, plik->d_name);
-                    PrzegladanieFolderu(nowa_sciezka, sciezka_folderu1, sciezka_folderu2, CzyR, Wielkosc_pliku);
+                    new_path = get_file_path(current_directory, file->d_name);
+                    list_folder_files(new_path, main_directory, target_directory, flag_R, file_size);
                 }
             }
         }
-        else if ((plik->d_type) == DT_REG) // GDY nie jest folderem, DT_REG to plik regularny
+        else if ((file->d_type) == DT_REG) // GDY nie jest folderem, DT_REG to file regularny
         {
-            nowa_sciezka = dodaj_do_sciezki(nazwa_sciezki1, plik->d_name); // tworzymy nową ścieżkę dodając do folderu źródłowego nazwę pliku, który jest przetwarzany
+            new_path = get_file_path(current_directory, file->d_name); // tworzymy nową ścieżkę dodając do folderu źródłowego nazwę pliku, który jest przetwarzany
             int i;
-            if ((i = sprawdzanie(nowa_sciezka, sciezka_folderu1, sciezka_folderu2)) == 1) //1. pełna ścieżka do pliku np. home/zrodlo/plik, 2. katalog zrodlowy, 3. katalog docelowy, zwraca nam 1 w przypadku gdy nie ma pliku w katalogu domowym lub czasy sie nie zgadzaja
+            if ((i = check_file(new_path, main_directory, target_directory)) == 1) //1. pełna ścieżka do pliku np. home/zrodlo/file, 2. katalog zrodlowy, 3. katalog docelowy, zwraca nam 1 w przypadku gdy nie ma pliku w katalogu domowym lub czasy sie nie zgadzaja
             {
-                if (pobierz_rozmiar(nowa_sciezka) > Wielkosc_pliku)
+                if (get_size(new_path) > file_size)
                 {
-                    kopiuj_mapowanie(nowa_sciezka, podmien_folder1(nowa_sciezka, sciezka_folderu1, sciezka_folderu2));
+                    map_file(new_path, change_path(new_path, main_directory, target_directory));
                 }
                 else
                 {
-                    kopiuj(nowa_sciezka, podmien_folder1(nowa_sciezka, sciezka_folderu1, sciezka_folderu2));
+                    copy(new_path, change_path(new_path, main_directory, target_directory));
                 }
             }
         }
     }
-    closedir(sciezka);
+    closedir(curr_dir);
 }
 
 /* Starting daemon */
