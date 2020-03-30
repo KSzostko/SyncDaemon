@@ -85,13 +85,13 @@ bool check_file(char *filepath, char *current_directory, char *target_directory)
     bool result = 0;
     char *filename = filepath + strlen(current_directory); //ucinamy poczatek katalogu i zostawiamy sama nazwe pliku
     // ja to mysle ze ta zmienna szukany do wywalenia ale to trzeba sprawdzic
-    char *szukamy = malloc(strlen(filename));                                        //alokacja pamieci
+    char *searched_path = malloc(strlen(filename));                                  //alokacja pamieci
     char *updated_path = change_path(filepath, current_directory, target_directory); //otrzymujemy zamieniony folder zrodlowy z docelowym
 
     int i = strlen(updated_path);
     for (i; updated_path[i] != '/'; i--)
         ;
-    strcpy(szukamy, updated_path + i + 1); //pod "szukamy" wpisywana jest nazwa pliku, nowa sciezka zostaje sama sciekza docelowa
+    strcpy(searched_path, updated_path + i + 1); //pod "searched_path" wpisywana jest nazwa pliku, nowa sciezka zostaje sama sciekza docelowa
     updated_path[i] = '\0';
     struct dirent *plik;
     DIR *dir;
@@ -99,17 +99,18 @@ bool check_file(char *filepath, char *current_directory, char *target_directory)
 
     while ((file = readdir(dir)))
     {
-        if (strcmp(file->d_name, szukamy) == 0) //jesli nazwa pliku z katalogu i szukanego jest taka sama to
+        if (strcmp(file->d_name, searched_path) == 0) //jesli nazwa pliku z katalogu i szukanego jest taka sama to
         {
-            free(szukamy);
+            free(searched_path);
             if ((file->d_type) == DT_DIR) //    GDY JEST FOLDEREM
             {
                 return 0;
             }
             else
             {
-                int time1 = (int)pobierz_czas(filepath), time2 = (int)pobierz_czas(dodaj_do_sciezki(updated_path, file->d_name)); //pobieramy czas modyfikacji pliku ze zrodlowego i z docelowego
-                if (time1 == time2)                                                                                               //jesli czasy takie same to return 0
+                int time1 = (int)get_last_modification_time(filepath);
+                int time2 = (int)get_last_modification_time(get_file_path(updated_path, file->d_name)); //pobieramy czas modyfikacji pliku ze zrodlowego i z docelowego
+                if (time1 == time2)                                                                     //jesli czasy takie same to return 0
                 {
                     return 0;
                 }
@@ -128,95 +129,101 @@ bool check_file(char *filepath, char *current_directory, char *target_directory)
     return result;
 }
 
-void Usuwanie(char *nazwa_sciezki_folder2, char *sciezka_folderu1, char *sciezka_folderu2, bool CzyR)
+/* Delete file */
+/* tutaj do wyjebania chyba jedna sciezka, bo 2 razy to samo jest */
+void delete_file(char *filepath, char *main_directory, char *target_direcotyr, bool flag_R)
 {
-    struct dirent *plik;
-    DIR *sciezka, *pom;
-    sciezka = opendir(nazwa_sciezki_folder2);
-    while ((plik = readdir(sciezka)))
+    struct dirent *file;
+    DIR *dir_path, *helper;
+    dir_path = opendir(filepath);
+    while ((file = readdir(dir_path)))
     {
-        if ((plik->d_type) == DT_DIR) //    GDY JEST FOLDEREM
+        if ((file->d_type) == DT_DIR) //    GDY JEST FOLDEREM
         {
-            if (CzyR)
+            if (flag_R)
             {
-                if (!(strcmp(plik->d_name, ".") == 0 || strcmp(plik->d_name, "..") == 0))
+                if (!(strcmp(file->d_name, ".") == 0 || strcmp(file->d_name, "..") == 0))
                 {
-                    char *nowa_sciezka = dodaj_do_sciezki(nazwa_sciezki_folder2, plik->d_name);
-                    Usuwanie(nowa_sciezka, sciezka_folderu1, sciezka_folderu2, CzyR);
-                    if (!(pom = opendir(podmien_folder2(nowa_sciezka, sciezka_folderu1, sciezka_folderu2))))
+                    char *new_dir_path = get_file_path(filepath, file->d_name);
+                    delete_file(new_dir_path, main_directory, target_direcotyr, flag_R);
+                    if (!(helper = opendir(podmien_folder2(new_dir_path, main_directory, target_direcotyr))))
                     {
-                        syslog(LOG_INFO, "Usunieto katalog %s", nowa_sciezka);
-                        remove(nowa_sciezka);
+                        syslog(LOG_INFO, "Usunieto katalog %s", new_dir_path);
+                        remove(new_dir_path);
                     }
                     else
                     {
-                        closedir(pom);
+                        closedir(helper);
                     }
                 }
             }
         }
         else
         {
-            char *nowa_sciezka = dodaj_do_sciezki(nazwa_sciezki_folder2, plik->d_name);
-            if (access(podmien_folder2(nowa_sciezka, sciezka_folderu1, sciezka_folderu2), F_OK) == -1)
+            char *new_dir_path = get_file_path(filepath, file->d_name);
+            if (access(podmien_folder2(new_dir_path, main_directory, target_direcotyr), F_OK) == -1)
             {
-                syslog(LOG_INFO, "Usunieto plik %s", nowa_sciezka);
-                remove(nowa_sciezka);
+                syslog(LOG_INFO, "Usunieto plik %s", new_dir_path);
+                remove(new_dir_path);
             }
         }
     }
-    closedir(sciezka);
+    closedir(dir_path);
 }
 
-void kopiuj(char *wej, char *wyj)
+/* Copy content from file to another */
+void copy(char *read_file_path, char *write_file_path)
 {
-    char bufor[16];
-    int plikwej, plikwyj;
-    int czytajwej, czytajwyj;
-    plikwej = open(wej, O_RDONLY);
-    plikwyj = open(wyj, O_CREAT | O_WRONLY | O_TRUNC, 0644);
-    if (plikwej == -1 || plikwyj == -1)
+    char buffer[16];
+    int read_file, write_file;
+    int read_file_desc, write_file_desc;
+    read_file = open(read_file_path, O_RDONLY);
+    write_file = open(write_file_path, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+    if (read_file == -1 || write_file == -1)
     {
         syslog(LOG_ERR, "Blad w otwarciu pliku!");
         exit(EXIT_FAILURE);
     }
 
-    while ((czytajwej = read(plikwej, bufor, sizeof(bufor))) > 0)
+    while ((read_file_desc = read(read_file, buffer, sizeof(buffer))) > 0)
     {
-        czytajwyj = write(plikwyj, bufor, (ssize_t)czytajwej);
-        if (czytajwyj != czytajwej)
+        write_file_desc = write(write_file, buffer, (ssize_t)read_file_desc);
+        if (write_file_desc != read_file_desc)
         {
             perror("BLAD");
             exit(EXIT_FAILURE);
         }
     }
-    close(plikwej);
-    close(plikwyj);
-    zmien_parametry(wej, wyj);
-    syslog(LOG_INFO, "Skopiowano plik %s", wej);
+    close(read_file);
+    close(write_file);
+    change_modification_time(read_file_path, write_file_path);
+    syslog(LOG_INFO, "Skopiowano plik %s", read_file_path);
 }
-void kopiuj_mapowanie(char *wej, char *wyj)
-{
-    int rozmiar = pobierz_rozmiar(wej);
-    int plikwej = open(wej, O_RDONLY);
-    int plikwyj = open(wyj, O_CREAT | O_WRONLY | O_TRUNC, 0644);
 
-    if (plikwej == -1 || plikwyj == -1)
+/* Map one file content to another */
+void map_file(char *read_file_path, char *write_file_path)
+{
+    int read_file_size = get_size(read_file_path);
+    int read_file = open(read_file_path, O_RDONLY);
+    int write_file = open(write_file_path, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+
+    if (read_file == -1 || write_file == -1)
     {
         syslog(LOG_ERR, "Blad w otwarciu pliku!");
         exit(EXIT_FAILURE);
     }
 
-    char *mapa = (char *)mmap(0, rozmiar, PROT_READ, MAP_SHARED | MAP_FILE, plikwej, 0);
+    char *map = (char *)mmap(0, read_file_size, PROT_READ, MAP_SHARED | MAP_FILE, read_file, 0);
 
-    write(plikwyj, mapa, rozmiar);
+    write(write_file, map, read_file_size);
 
-    close(plikwej);
-    close(plikwyj);
-    munmap(mapa, rozmiar); //usuwanie mapy z paamieci;
-    zmien_parametry(wej, wyj);
-    syslog(LOG_INFO, "Z uzyciem mapowania skopiowano plik %s do miejsca %s", wej, wyj);
+    close(read_file);
+    close(write_file);
+    munmap(map, read_file_size); //usuwanie mapy z paamieci;
+    zmien_parametry(read_file_path, write_file_path);
+    syslog(LOG_INFO, "Z uzyciem mapowania skopiowano plik %s do miejsca %s", read_file_path, write_file_path);
 }
+
 void PrzegladanieFolderu(char *nazwa_sciezki1, char *sciezka_folderu1, char *sciezka_folderu2, bool CzyR, int Wielkosc_pliku)
 //1. folder źródłowy, 2. folder źródłowy, 3. folder docelowy, 4. rekurencja, 5. wielkość pliku
 {
@@ -268,7 +275,9 @@ void PrzegladanieFolderu(char *nazwa_sciezki1, char *sciezka_folderu1, char *sci
     }
     closedir(sciezka);
 }
-void Logowanie(int sig)
+
+/* Starting daemon */
+void start_daemon(int sig)
 {
     syslog(LOG_INFO, "Wybudzenie demona przez sygnal SIGUSR1");
 }
