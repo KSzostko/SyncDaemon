@@ -130,12 +130,14 @@ bool check_file(char *filepath, char *current_directory, char *target_directory)
 }
 
 /* Delete file */
-/* tutaj do wyjebania chyba jedna sciezka, bo 2 razy to samo jest */
-void delete_file(char *filepath, char *main_directory, char *target_direcotyr, bool flag_R)
+/* listing files and folders from target directory */
+/* if there's someting that's not in main directory */
+/* delete that */
+void delete_files(char *current_directory, char *main_directory, char *target_directory, bool flag_R)
 {
     struct dirent *file;
     DIR *dir_path, *helper;
-    dir_path = opendir(filepath);
+    dir_path = opendir(current_directory);
     while ((file = readdir(dir_path)))
     {
         if ((file->d_type) == DT_DIR) //    GDY JEST FOLDEREM
@@ -144,9 +146,9 @@ void delete_file(char *filepath, char *main_directory, char *target_direcotyr, b
             {
                 if (!(strcmp(file->d_name, ".") == 0 || strcmp(file->d_name, "..") == 0))
                 {
-                    char *new_dir_path = get_file_path(filepath, file->d_name);
-                    delete_file(new_dir_path, main_directory, target_direcotyr, flag_R);
-                    if (!(helper = opendir(podmien_folder2(new_dir_path, main_directory, target_direcotyr))))
+                    char *new_dir_path = get_file_path(current_directory, file->d_name);
+                    delete_files(new_dir_path, main_directory, target_directory, flag_R);
+                    if (!(helper = opendir(change_path(new_dir_path, target_directory, main_directory))))
                     {
                         syslog(LOG_INFO, "Usunieto katalog %s", new_dir_path);
                         remove(new_dir_path);
@@ -160,8 +162,8 @@ void delete_file(char *filepath, char *main_directory, char *target_direcotyr, b
         }
         else
         {
-            char *new_dir_path = get_file_path(filepath, file->d_name);
-            if (access(podmien_folder2(new_dir_path, main_directory, target_direcotyr), F_OK) == -1)
+            char *new_dir_path = get_file_path(current_directory, file->d_name);
+            if (access(change_path(new_dir_path, target_directory, main_directory), F_OK) == -1)
             {
                 syslog(LOG_INFO, "Usunieto file %s", new_dir_path);
                 remove(new_dir_path);
@@ -224,7 +226,9 @@ void map_file(char *read_file_path, char *write_file_path)
     syslog(LOG_INFO, "Z uzyciem mapowania skopiowano file %s do miejsca %s", read_file_path, write_file_path);
 }
 
-void list_folder_files(char *current_directory, char *main_directory, char *target_directory, bool flag_R, int file_size)
+/* update files and folders */
+/* in target directory if needed */
+void update_target_folder(char *current_directory, char *main_directory, char *target_directory, bool flag_R, int file_size)
 //1. folder źródłowy, 2. folder źródłowy, 3. folder docelowy, 4. rekurencja, 5. wielkość pliku
 {
     printf("JESTESMY W : %s\n", current_directory);
@@ -252,7 +256,7 @@ void list_folder_files(char *current_directory, char *main_directory, char *targ
                         closedir(helper);
                     }
                     new_path = get_file_path(current_directory, file->d_name);
-                    list_folder_files(new_path, main_directory, target_directory, flag_R, file_size);
+                    update_target_folder(new_path, main_directory, target_directory, flag_R, file_size);
                 }
             }
         }
