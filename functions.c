@@ -147,7 +147,6 @@ void delete_files(char *current_directory, char *main_directory, char *target_di
                 if (!(strcmp(file->d_name, ".") == 0 || strcmp(file->d_name, "..") == 0))
                 {
                     char *new_dir_path = get_file_path(current_directory, file->d_name);
-                    delete_files(new_dir_path, main_directory, target_directory, flag_R);
                     if (!(helper = opendir(change_path(new_dir_path, target_directory, main_directory))))
                     {
                         syslog(LOG_INFO, "Usunieto katalog %s", new_dir_path);
@@ -156,6 +155,7 @@ void delete_files(char *current_directory, char *main_directory, char *target_di
                     else
                     {
                         closedir(helper);
+                        delete_files(new_dir_path, main_directory, target_directory, flag_R);
                     }
                 }
             }
