@@ -2,58 +2,148 @@
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
 #include <syslog.h>
 #include <string.h>
+#include "functions.h"
 
-int main(int argc, char** argv) {
-        
-        /* Our process ID and Session ID */
-        pid_t pid, sid;
-        
-        /* Fork off the parent process */
-        pid = fork();
-        if (pid < 0) {
-                exit(EXIT_FAILURE);
-        }
-        /* If we got a good PID, then
-           we can exit the parent process. */
-        if (pid > 0) {
-                exit(EXIT_SUCCESS);
-        }
+int main(int argc, char **argv)
+{
+    openlog("Sync Daemon", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_USER);
 
-        /* Change the file mode mask */
-        umask(0);
-                
-        /* Open any logs here */        
-                
-        /* Create a new SID for the child process */
-        sid = setsid();
-        if (sid < 0) {
-                /* Log the failure */
-                exit(EXIT_FAILURE);
+    if (argc < 3)
+    {
+        printf("You have not specified enough arguments\n");
+        syslog(LOG_ERR, "You have not specified enough arguments");
+        exit(EXIT_FAILURE);
+    }
+
+    /* Our process ID and Session ID */
+    pid_t pid, sid;
+
+    /* Fork off the parent process */
+    pid = fork();
+    if (pid < 0)
+    {
+        exit(EXIT_FAILURE);
+    }
+    /* If we got a good PID, then
+       we can exit the parent process. */
+    if (pid > 0)
+    {
+        exit(EXIT_SUCCESS);
+    }
+
+    /* Change the file mode mask */
+    umask(0);
+
+    /* Open any logs here */
+
+    /* Create a new SID for the child process */
+    sid = setsid();
+    if (sid < 0)
+    {
+        /* Log the failure */
+        exit(EXIT_FAILURE);
+    }
+
+    /* Change the current working directory */
+    if ((chdir("/")) < 0)
+    {
+        /* Log the failure */
+        exit(EXIT_FAILURE);
+    }
+
+    struct stat st;
+    int c;
+    int size = 10, time = 300, recursion = 0;
+    char *in_path = NULL;
+    char *out_path = NULL;
+
+    while ((c = getopt(argc, argv, "i:o:s:t:R")) != -1)
+    {
+        switch (c)
+        {
+        case 'i':
+            if (stat(optarg, &st) == 0)
+            {
+                if (S_IFDIR & st.st_mode)
+                {
+                    in_path = optarg;
+                }
+                else
+                {
+                    printf("You have not specified valid directory\n");
+                    syslog(LOG_ERR, "You have not specified valid input directory");
+                    exit(EXIT_FAILURE);
+                }
+            }
+            break;
+        case 'o':
+            if (stat(optarg, &st) == 0)
+            {
+                if (S_IFDIR & st.st_mode)
+                {
+                    out_path = optarg;
+                }
+                else
+                {
+                    printf("You have not specified valid directory\n");
+                    syslog(LOG_ERR, "You have not specified valid output directory");
+                    exit(EXIT_FAILURE);
+                }
+            }
+            break;
+        case 's':
+            size = atoi(optarg);
+            break;
+        case 't':
+            time = atoi(optarg);
+            break;
+        case 'R':
+            recursion = 1;
+            break;
+        default:
+            printf("You have specified unknown parameter\n");
+            syslog(LOG_ERR, "You have specified unknown parameter\n");
+            abort();
         }
-        
-        /* Change the current working directory */
-        if ((chdir("/")) < 0) {
-                /* Log the failure */
-                exit(EXIT_FAILURE);
+    }
+
+    if (in_path == NULL || out_path == NULL)
+    {
+        printf("You have not specified both requiered paths\n");
+        syslog(LOG_ERR, "You have not specified both requiered paths\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // printf("i: %s\n", in_path);
+    // printf("o: %s\n", out_path);
+    // printf("s: %d\n", size);
+    // printf("t: %d\n", time);
+    // printf("R: %d\n", recursion);
+
+    /* Close out the standard file descriptors */
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+
+    /* The Big Loop */
+    while (1)
+    {
+        delete_files(out_path, in_path, in_path, recursion);
+        update_target_folder(in_path, in_path, out_path, recursion, size);
+        syslog(LOG_INFO, "Folders synchronized");
+
+        if (sleep(time) == 0)
+        {
+            syslog(LOG_INFO, "Daemon working again");
         }
-        
-        /* Close out the standard file descriptors */
-        close(STDIN_FILENO);
-        close(STDOUT_FILENO);
-        close(STDERR_FILENO);
-        
-        /* Daemon-specific initialization goes here */
-        
-        /* The Big Loop */
-        while (1) {
-           /* Do some task here ... */
-	   
-           sleep(20); /* wait 20 seconds */
-        }
-   exit(EXIT_SUCCESS);
+    }
+
+    closelog();
+    exit(EXIT_SUCCESS);
 }
