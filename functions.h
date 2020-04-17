@@ -1,30 +1,15 @@
-#ifndef FUNCTIONS_H_INCLUDED
-#define FUNCTIONS_H_INCLUDED
-#include <sys/stat.h>
-#include <sys/mman.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <dirent.h>
-#include <signal.h>
-#include <unistd.h>
-#include <stdbool.h>
-#include <signal.h>
-#include <string.h>
-#include <utime.h>
-#include <fcntl.h>
-#include <syslog.h>
-off_t pobierz_rozmiar(char *in);
-time_t pobierz_czas(char *wej);
-mode_t pobierz_chmod(char *wej);
-void zmien_parametry(char *wej, char *wyj);
-char *podmien_folder2(char *sciezka1, char *sciezka_folderu1, char *sciezka_folderu2);
-char *podmien_folder1(char *sciezka1, char *sciezka_folderu1, char *sciezka_folderu2);
-char *dodaj_do_sciezki(char *sciezka, char *dodatek);
-bool sprawdzanie(char *nazwa_sciezki, char *sciezka_folderu1, char *sciezka_folderu2);
-void Usuwanie(char *nazwa_sciezki_folder2, char *sciezka_folderu1, char *sciezka_folderu2, bool CzyR);
-void kopiuj(char *wej, char *wyj);
-void kopiuj_mapowanie(char *wej, char *wyj);
-void PrzegladanieFolderu(char *nazwa_sciezki1, char *sciezka_folderu1, char *sciezka_folderu2, bool CzyR, int Wielkosc_pliku);
-void Logowanie();
-
-#endif // FUNCTIONS_H_INCLUDED
+#ifndef FUNCTIONS_H
+#define FUNCTIONS_H
+off_t get_size(char *path);
+time_t get_last_modification_time(char *path);
+mode_t get_chmod(char *path);
+void change_modification_time(char *mainFile, char *updatedFile);
+char *change_path(char *file_path, char *current_directory, char *target_directory);
+char *get_file_path(char *path, char *filename);
+bool check_file(char *filepath, char *current_directory, char *target_directory);
+void copy(char *read_file_path, char *write_file_path);
+void map_file(char *read_file_path, char *write_file_path);
+void delete_files(char *current_directory, char *main_directory, char *target_directory, bool flag_R);
+void update_target_folder(char *current_directory, char *main_directory, char *target_directory, bool flag_R, int file_size);
+void start_daemon(int sig);
+#endif
