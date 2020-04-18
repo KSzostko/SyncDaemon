@@ -1,0 +1,24 @@
+Temat projektu: Demon synchronizujący dwa podkatalogi
+Skład grupy:
+- Jakub Szóstko
+- Przemysław Stupak
+
+Funkcjonalności:
+- porównywanie plików (nazw, ostatniego czasu modyfikacji i zawartości) znajdujących się w katalogach źródłowym i docelowym
+- opcjonalna zmiana rozmiaru plików, od którego wykorzystana będzie funkcja do mapowania dużych plików do pamięci zamiast zwykłego kopiowania(domyślna wartość graniczna to 10MB)
+- opcjonalna zmiana czasu spania demona (domyślnie jest to 5 minut)
+- opcjonalna rekurencyjna sychronizacja katalogów, tj. oprócz plików demon dodatkowo porównuje podfoldery znajdujące się w folderach głównym i docelowym, oraz zawartość tych podfolderów
+- jeżeli demon napotka pliki/katalogi znajdujące się w folderze docelowym ale nie w źródłowym usuwa je. Jeśli demon napotka pliki o takiej samej nazwie w obu katalogach, plik w folderze docelowym ma zmienianą zawartość i datę modyfikacji na taką jak plik w folderze źródłowym
+- możliwość natychmiastowego wybudzenia demona po wysłaniu sygnału SIGUSR1 (komenda kill -SIGUSR1 process_id)
+- dokumentowanie przebiegu działania demona poprzez wysyłanie logów systemowych z informacjami o błędach oraz o wykonanych zadaniach
+
+Uruchomienie demona:
+W [] zostaną podane argumenty opcjonalne.
+./output -i sciezka_do_foldeu_źródłowego -o ścieżka_do_folderu_docelowego [-s rozmiar_graniczny_w_MB] [-t czas_uśpienia_w_sekundach] [-R]
+
+Analiza wpływu metody kopiowania pliku na szybkość kopiowania:
+Test przeprowadzona dla kopiowania pliku wielkości 1GB.
+Czasy kopiowania:
+- mapowanie pliku do pamięci: ok 0.76 sekundy
+- zwykłe kopiowanie: ok 4.5 minuty
+Jak widać różnica w szybkości kopiowania jest ogromna, pomimo tego, że plik nie jest jeszcze stosunkowo duży. Jak widać mapowanie pozwala znacznie zwiększyć wydajność programu.
