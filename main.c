@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <syslog.h>
 #include <string.h>
+#include <signal.h>
 #include "functions.h"
 
 int main(int argc, char **argv)
@@ -99,6 +100,8 @@ int main(int argc, char **argv)
             break;
         case 's':
             size = atoi(optarg);
+            // to jest po to by moc podawac w MB, bo get_size zwraca w bajtach
+            size *= 1000000;
             break;
         case 't':
             time = atoi(optarg);
@@ -120,16 +123,16 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    // printf("i: %s\n", in_path);
-    // printf("o: %s\n", out_path);
-    // printf("s: %d\n", size);
-    // printf("t: %d\n", time);
-    // printf("R: %d\n", recursion);
-
     /* Close out the standard file descriptors */
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
+
+    if (signal(SIGUSR1, start_daemon) == SIG_ERR)
+    {
+        syslog(LOG_ERR, "SIGUSR1 signal error");
+        exit(EXIT_FAILURE);
+    }
 
     /* The Big Loop */
     while (1)
