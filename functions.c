@@ -23,18 +23,6 @@ time_t get_last_modification_time(char *path)
     return st.st_mtime;
 }
 
-/* Return a chmod */
-mode_t get_chmod(char *path)
-{
-    struct stat st;
-    if (stat(path, &st) == -1)
-    {
-        syslog(LOG_ERR, "Blad pobrania chmod dla pliku %s", path);
-        exit(EXIT_FAILURE);
-    }
-    return st.st_mode;
-}
-
 /* Change modification time */
 void change_modification_time(char *mainFile, char *updatedFile)
 {
@@ -44,14 +32,6 @@ void change_modification_time(char *mainFile, char *updatedFile)
     if (utime(updatedFile, &timebuf) != 0)
     {
         syslog(LOG_ERR, "Time modification failed");
-        exit(EXIT_FAILURE);
-    }
-
-    // po co to tutaj teraz???
-    mode_t old = get_chmod(mainFile);
-    if (chmod(updatedFile, old) != 0)
-    {
-        syslog(LOG_ERR, "Blad ustawienia uprawnien do pliku!");
         exit(EXIT_FAILURE);
     }
 }
