@@ -17,7 +17,7 @@ time_t get_last_modification_time(char *path)
     struct stat st;
     if (stat(path, &st) == -1)
     {
-        syslog(LOG_ERR, "Blad z pobraniem daty modyfikacji dla pliku %s", path);
+        syslog(LOG_ERR, "Unable to get last modification time for the file %s", path);
         exit(EXIT_FAILURE);
     }
     return st.st_mtime;
@@ -130,7 +130,7 @@ void delete_files(char *current_directory, char *main_directory, char *target_di
                     delete_files(new_dir_path, main_directory, target_directory, flag_R);
                     if (!(helper = opendir(change_path(new_dir_path, target_directory, main_directory))))
                     {
-                        syslog(LOG_INFO, "Usunieto katalog %s", new_dir_path);
+                        syslog(LOG_INFO, "Directory %s deleted", new_dir_path);
                         remove(new_dir_path);
                     }
                     else
@@ -146,7 +146,7 @@ void delete_files(char *current_directory, char *main_directory, char *target_di
             char *new_dir_path = get_file_path(current_directory, file->d_name);
             if (access(change_path(new_dir_path, target_directory, main_directory), F_OK) == -1)
             {
-                syslog(LOG_INFO, "Usunieto file %s", new_dir_path);
+                syslog(LOG_INFO, "File %s deleted", new_dir_path);
                 remove(new_dir_path);
             }
         }
@@ -164,7 +164,7 @@ void copy(char *read_file_path, char *write_file_path)
     write_file = open(write_file_path, O_CREAT | O_WRONLY | O_TRUNC, 0644);
     if (read_file == -1 || write_file == -1)
     {
-        syslog(LOG_ERR, "Blad w otwarciu pliku!");
+        syslog(LOG_ERR, "Opening file error");
         exit(EXIT_FAILURE);
     }
 
@@ -173,14 +173,14 @@ void copy(char *read_file_path, char *write_file_path)
         write_file_desc = write(write_file, buffer, (ssize_t)read_file_desc);
         if (write_file_desc != read_file_desc)
         {
-            perror("BLAD");
+            syslog(LOG_ERR, "Writing to file failed");
             exit(EXIT_FAILURE);
         }
     }
     close(read_file);
     close(write_file);
     change_modification_time(read_file_path, write_file_path);
-    syslog(LOG_INFO, "Skopiowano file %s", read_file_path);
+    syslog(LOG_INFO, "File %s copied", read_file_path);
 }
 
 /* Map one file content to another */
@@ -192,7 +192,7 @@ void map_file(char *read_file_path, char *write_file_path)
 
     if (read_file == -1 || write_file == -1)
     {
-        syslog(LOG_ERR, "Blad w otwarciu pliku!");
+        syslog(LOG_ERR, "Opening file error");
         exit(EXIT_FAILURE);
     }
 
@@ -204,7 +204,7 @@ void map_file(char *read_file_path, char *write_file_path)
     close(write_file);
     munmap(map, read_file_size); //usuwanie mapy z paamieci;
     zmien_parametry(read_file_path, write_file_path);
-    syslog(LOG_INFO, "Z uzyciem mapowania skopiowano file %s do miejsca %s", read_file_path, write_file_path);
+    syslog(LOG_INFO, "File from %s successfully mapped to %s", read_file_path, write_file_path);
 }
 
 /* update files and folders */
@@ -212,14 +212,12 @@ void map_file(char *read_file_path, char *write_file_path)
 void update_target_folder(char *current_directory, char *main_directory, char *target_directory, bool flag_R, int file_size)
 //1. folder źródłowy, 2. folder źródłowy, 3. folder docelowy, 4. rekurencja, 5. wielkość pliku
 {
-    printf("JESTESMY W : %s\n", current_directory);
     struct dirent *file;                   //struct dirent - struktura wskazująca na element w katalogu (file/folder), zawiera nazwę pliku
     DIR *curr_dir, *helper;                //funkcja otwierająca strumień do katalogu
     curr_dir = opendir(current_directory); //przechodzimy do folderu źródłowego
     char *new_path;
     while ((file = readdir(curr_dir)))
     {
-        printf("%s  \n", file->d_name);
         if ((file->d_type) == DT_DIR) //GDY JEST FOLDEREM
         {
             if (flag_R)
@@ -229,7 +227,7 @@ void update_target_folder(char *current_directory, char *main_directory, char *t
                     char *path_to_directory = change_path(get_file_path(current_directory, file->d_name), main_directory, target_directory);
                     if (!(helper = opendir(path_to_directory)))
                     {
-                        syslog(LOG_INFO, "Stworzono folder %s", path_to_directory);
+                        syslog(LOG_INFO, "Directory %s created", path_to_directory);
                         mkdir(path_to_directory, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
                     }
                     else
@@ -264,5 +262,5 @@ void update_target_folder(char *current_directory, char *main_directory, char *t
 /* Starting daemon */
 void start_daemon(int sig)
 {
-    syslog(LOG_INFO, "Wybudzenie demona przez sygnal SIGUSR1");
+    syslog(LOG_INFO, "Dameon started after receiving SIGURS1 signal");
 }
