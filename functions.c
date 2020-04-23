@@ -36,17 +36,6 @@ void change_modification_time(char *mainFile, char *updatedFile)
     }
 }
 
-/* change file directory */
-char *change_path(char *file_path, char *current_directory, char *target_directory) //1. pełna ścieżka do pliku np.home / zrodlo / file, 2. katalog zrodlowy, 3. katalog docelowy
-{
-    char *filename = file_path + strlen(current_directory);                                    //ucinamy poczatek katalogu i zostawiamy sama nazwe pliku
-    char *updated_file_path = (char *)malloc(strlen(target_directory) + strlen(filename) + 1); //alokujemy pamiec na nowa sciezke
-    strcpy(updated_file_path, target_directory);                                               //zamiana katalogu ze zrodlowego na docelowy, czyli doklejamy do pustej zmiennej nazwe katalogu docelowego
-    strcat(updated_file_path, filename);                                                       //dodanie nazwy pliku
-
-    return updated_file_path;
-}
-
 /* Return full path to file */
 char *get_file_path(char *path, char *filename) //1. ścieżka źródłowa, 2. nazwa pliku
 {
@@ -65,8 +54,8 @@ bool check_file(char *filepath, char *current_directory, char *target_directory)
     bool result = 0;
     char *filename = filepath + strlen(current_directory); //ucinamy poczatek katalogu i zostawiamy sama nazwe pliku
     // ja to mysle ze ta zmienna szukany do wywalenia ale to trzeba sprawdzic
-    char *searched_path = (char *)malloc(strlen(filename));                          //alokacja pamieci
-    char *updated_path = change_path(filepath, current_directory, target_directory); //otrzymujemy zamieniony folder zrodlowy z docelowym
+    char *searched_path = (char *)malloc(strlen(filename));         //alokacja pamieci
+    char *updated_path = get_file_path(target_directory, filename); //otrzymujemy zamieniony folder zrodlowy z docelowym
 
     int i = strlen(updated_path);
     for (i; updated_path[i] != '/'; i--)
@@ -113,11 +102,11 @@ bool check_file(char *filepath, char *current_directory, char *target_directory)
 /* listing files and folders from target directory */
 /* if there's someting that's not in main directory */
 /* delete that */
-void delete_files(char *current_directory, char *main_directory, char *target_directory, bool flag_R)
+void delete_files(char *main_directory, char *target_directory, bool flag_R)
 {
     struct dirent *file;
     DIR *dir_path, *helper;
-    dir_path = opendir(current_directory);
+    dir_path = opendir(main_directory);
     while ((file = readdir(dir_path)))
     {
         if ((file->d_type) == DT_DIR) //    GDY JEST FOLDEREM
@@ -126,28 +115,31 @@ void delete_files(char *current_directory, char *main_directory, char *target_di
             {
                 if (!(strcmp(file->d_name, ".") == 0 || strcmp(file->d_name, "..") == 0))
                 {
-                    char *new_dir_path = get_file_path(current_directory, file->d_name);
-                    delete_files(new_dir_path, main_directory, target_directory, flag_R);
-                    if (!(helper = opendir(change_path(new_dir_path, target_directory, main_directory))))
+                    char *new_main_path = get_file_path(main_directory, file->d_name);
+                    char *new_target_path = get_file_path(target_directory, file->d_name);
+
+                    // to jest w tym miejscu bo najpierw trzeba usunąć wszystko z folderu by móc go usunąć
+                    delete_files(new_main_path, new_target_path, flag_R);
+                    if (!(helper = opendir(new_target_path)))
                     {
-                        syslog(LOG_INFO, "Directory %s deleted", new_dir_path);
-                        remove(new_dir_path);
+                        syslog(LOG_INFO, "Directory %s deleted", new_main_path);
+                        remove(new_main_path);
                     }
                     else
                     {
                         closedir(helper);
-                        delete_files(new_dir_path, main_directory, target_directory, flag_R);
                     }
                 }
             }
         }
         else
         {
-            char *new_dir_path = get_file_path(current_directory, file->d_name);
-            if (access(change_path(new_dir_path, target_directory, main_directory), F_OK) == -1)
+            char *new_main_path = get_file_path(main_directory, file->d_name);
+            char *new_target_path = get_file_path(target_directory, file->d_name);
+            if (access(new_target_path, F_OK) == -1)
             {
-                syslog(LOG_INFO, "File %s deleted", new_dir_path);
-                remove(new_dir_path);
+                syslog(LOG_INFO, "File %s deleted", new_main_path);
+                remove(new_main_path);
             }
         }
     }
@@ -209,14 +201,14 @@ void map_file(char *read_file_path, char *write_file_path)
 
 /* update files and folders */
 /* in target directory if needed */
-void update_target_folder(char *current_directory, char *main_directory, char *target_directory, bool flag_R, int file_size)
+void update_target_folder(char *main_directory, char *target_directory, bool flag_R, int file_size)
 //1. folder źródłowy, 2. folder źródłowy, 3. folder docelowy, 4. rekurencja, 5. wielkość pliku
 {
-    struct dirent *file;                   //struct dirent - struktura wskazująca na element w katalogu (file/folder), zawiera nazwę pliku
-    DIR *curr_dir, *helper;                //funkcja otwierająca strumień do katalogu
-    curr_dir = opendir(current_directory); //przechodzimy do folderu źródłowego
+    struct dirent *file;                //struct dirent - struktura wskazująca na element w katalogu (file/folder), zawiera nazwę pliku
+    DIR *main_dir, *helper;             //funkcja otwierająca strumień do katalogu
+    main_dir = opendir(main_directory); //przechodzimy do folderu źródłowego
     char *new_path;
-    while ((file = readdir(curr_dir)))
+    while ((file = readdir(main_dir)))
     {
         if ((file->d_type) == DT_DIR) //GDY JEST FOLDEREM
         {
@@ -224,7 +216,7 @@ void update_target_folder(char *current_directory, char *main_directory, char *t
             {
                 if (!(strcmp(file->d_name, ".") == 0 || strcmp(file->d_name, "..") == 0))
                 {
-                    char *path_to_directory = change_path(get_file_path(current_directory, file->d_name), main_directory, target_directory);
+                    char *path_to_directory = get_file_path(target_directory, file->d_name);
                     if (!(helper = opendir(path_to_directory)))
                     {
                         syslog(LOG_INFO, "Directory %s created", path_to_directory);
@@ -234,29 +226,29 @@ void update_target_folder(char *current_directory, char *main_directory, char *t
                     {
                         closedir(helper);
                     }
-                    new_path = get_file_path(current_directory, file->d_name);
-                    update_target_folder(new_path, main_directory, target_directory, flag_R, file_size);
+                    char *new_main_path = get_file_path(main_directory, file->d_name);
+                    update_target_folder(new_main_path, path_to_directory, flag_R, file_size);
                 }
             }
         }
         else if ((file->d_type) == DT_REG) // GDY nie jest folderem, DT_REG to file regularny
         {
-            new_path = get_file_path(current_directory, file->d_name); // tworzymy nową ścieżkę dodając do folderu źródłowego nazwę pliku, który jest przetwarzany
+            new_path = get_file_path(main_directory, file->d_name); // tworzymy nową ścieżkę dodając do folderu źródłowego nazwę pliku, który jest przetwarzany
             int i;
             if ((i = check_file(new_path, main_directory, target_directory)) == 1) //1. pełna ścieżka do pliku np. home/zrodlo/file, 2. katalog zrodlowy, 3. katalog docelowy, zwraca nam 1 w przypadku gdy nie ma pliku w katalogu domowym lub czasy sie nie zgadzaja
             {
                 if (get_size(new_path) > file_size)
                 {
-                    map_file(new_path, change_path(new_path, main_directory, target_directory));
+                    map_file(new_path, get_file_path(target_directory, file->d_name));
                 }
                 else
                 {
-                    copy(new_path, change_path(new_path, main_directory, target_directory));
+                    copy(new_path, get_file_path(target_directory, file->d_name));
                 }
             }
         }
     }
-    closedir(curr_dir);
+    closedir(main_dir);
 }
 
 /* Starting daemon */

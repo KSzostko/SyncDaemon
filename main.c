@@ -137,8 +137,8 @@ int main(int argc, char **argv)
     /* The Big Loop */
     while (1)
     {
-        delete_files(out_path, in_path, in_path, recursion);
-        update_target_folder(in_path, in_path, out_path, recursion, size);
+        delete_files(out_path, in_path, recursion);
+        update_target_folder(in_path, out_path, recursion, size);
         syslog(LOG_INFO, "Folders synchronized");
 
         if (sleep(time) == 0)
