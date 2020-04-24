@@ -195,7 +195,7 @@ void map_file(char *read_file_path, char *write_file_path)
     close(read_file);
     close(write_file);
     munmap(map, read_file_size); //usuwanie mapy z paamieci;
-    zmien_parametry(read_file_path, write_file_path);
+    change_modification_time(read_file_path, write_file_path);
     syslog(LOG_INFO, "File from %s successfully mapped to %s", read_file_path, write_file_path);
 }
 
