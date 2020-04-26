@@ -41,20 +41,16 @@ int main(int argc, char **argv)
     /* Change the file mode mask */
     umask(0);
 
-    /* Open any logs here */
-
     /* Create a new SID for the child process */
     sid = setsid();
     if (sid < 0)
     {
-        /* Log the failure */
         exit(EXIT_FAILURE);
     }
 
     /* Change the current working directory */
     if ((chdir("/")) < 0)
     {
-        /* Log the failure */
         exit(EXIT_FAILURE);
     }
 
@@ -100,7 +96,6 @@ int main(int argc, char **argv)
             break;
         case 's':
             size = atoi(optarg);
-            // to jest po to by moc podawac w MB, bo get_size zwraca w bajtach
             size *= 1000000;
             break;
         case 't':
