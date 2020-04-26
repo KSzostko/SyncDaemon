@@ -15,7 +15,7 @@ int main(int argc, char **argv)
 {
     openlog("Sync Daemon", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_USER);
 
-    if (argc < 3)
+    if (argc < 4)
     {
         printf("You have not specified enough arguments\n");
         syslog(LOG_ERR, "You have not specified enough arguments");
@@ -56,7 +56,7 @@ int main(int argc, char **argv)
 
     struct stat st;
     int c;
-    int size = 10, time = 300, recursion = 0;
+    int size = 10 * 1000000, time = 300, recursion = 0;
     char *in_path = NULL;
     char *out_path = NULL;
 
